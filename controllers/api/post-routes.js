@@ -1,21 +1,12 @@
 const router = require('express').Router();
-const sequelize = require('../../config/connection');
 const { Post, User, Comment } = require("../../models");
 const withAuth = require('../../utils/auth');
 
 router.get('/', (req, res) => {
     Post.findAll({
-        attributes: ['id', 'title', 'created_at'],
+        attributes: ['id', 'title', 'post_text', 'user_id', 'created_at'],
         order: [['created_at', 'DESC']],
         include: [
-            {
-                model: Comment,
-                attributes: ['id', 'comment_text', 'post_id', 'user_id', 'created_at'],
-                include: {
-                    model: User,
-                    attributes: ['username']
-                }
-            },
             {
                 model: User,
                 attributes: ['username']
@@ -34,7 +25,7 @@ router.get('/:id', (req, res) => {
         where: {
             id: req.params.id
         },
-        attributes: ['id', 'title', 'created_at'],
+        attributes: ['id', 'title', 'post_text', 'user_id', 'created_at'],
         include: [
                 {
                     model: Comment,
@@ -67,6 +58,7 @@ router.post('/', withAuth, (req, res) => {
     // expects {title: 'Kkfmhv!', user_id: 1}
     Post.create({
         title: req.body.title,
+        post_text: req.body.post_text,
         user_id: req.session.user_id
     })
         .then(dbPostData => res.json(dbPostData))
@@ -76,24 +68,11 @@ router.post('/', withAuth, (req, res) => {
         });
 });
 
-// /api/posts/upvote
-router.put('/upvote', withAuth, (req, res) => {
-    // make sure the session exists first
-    if (req.session) {
-        // pass session id along with all destructured properties on req.body    
-        Post.upvote({ ...req.body, user_id: req.session.user_id }, { Comment, User })
-            .then(updatedVoteData => res.json(updatedVoteData))
-            .catch(err => {
-                console.log(err);
-                res.status(500).json(err);
-            });
-    }
-});
-
 router.put('/:id', withAuth, (req, res) => {
     Post.update(
         {
-            title: req.body.title
+            title: req.body.title,
+            post_text: req.body.post_text
         },
         {
             where: {
